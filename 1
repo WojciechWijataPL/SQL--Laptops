@@ -1,0 +1,128 @@
+SELECT  *
+FROM laptops l 
+limit 5;
+
+
+/* let see brands na count it!*/
+
+SELECT brand, COUNT(brand)
+from laptops l
+group by 1
+order by 2 desc;
+
+--- best rated laptops to 30k
+select *
+from laptops l 
+where Price  < 30000
+order by Rating desc 
+limit 5;
+
+/* every acer model*/
+
+select brand,  Model 
+from laptops l
+where brand = 'acer';
+
+/* categorise of laptops*/
+
+select brand, Model, ram_memory, 
+CASE 
+	when ram_memory = '8' then 'notefficient'
+	when ram_memory = '12' then 'ok'
+	when ram_memory = '16' then 'efficient'
+	ELSE 'wow'
+END as 'Efficenty'
+from laptops l ;
+
+-- highest price
+select brand, model, max(price)
+from laptops l
+group by 1, 2
+order by 3 DESC 
+limit 5;
+
+WITH hdd AS (
+  SELECT 
+    index,
+    COUNT(primary_storage_type) AS typehdd
+  FROM laptops l 
+  WHERE primary_storage_type = 'HDD'
+  GROUP BY index
+),
+ssd AS (
+  SELECT 
+    index,
+    COUNT(primary_storage_type) AS typessd
+  FROM laptops l 
+  WHERE primary_storage_type = 'SSD'
+  GROUP BY index
+)
+SELECT 
+  (typessd / (SELECT COUNT(*) FROM laptops)) AS ssd_prc,
+  (typehdd / (SELECT COUNT(*) FROM laptops)) AS hdd_prc
+FROM laptops l 
+JOIN hdd ON l.index = hdd.index
+JOIN ssd ON l.index = ssd.index;
+
+
+/* each group divided to nuber of cores */
+select distinct num_cores, count(processor_tier) over (PARTITION by num_cores) as 'number of laptops'
+FROM laptops l 
+order by 2 desc;
+
+-- full resolution type
+select brand, Model, display_size, concat(resolution_width, 'x', resolution_height) as 'resolution'
+from laptops l 
+where concat(resolution_width, 'x', resolution_height) like '%1920x1080%'
+
+-- avg price every brand with amd processor
+SELECT brand, ROUND( AVG(price), 2) AS avg_price
+FROM laptops l
+WHERE processor_brand = 'amd'
+GROUP BY brand
+
+
+SELECT brand, ROUND( AVG(price), 2) AS avg_price
+FROM laptops l
+WHERE processor_brand = 'intel'
+GROUP BY brand
+
+
+select 
+(SELECT ROUND( AVG(price), 2)
+FROM laptops l
+WHERE processor_brand = 'intel'
+GROUP BY brand) as 'intel',
+(SELECT  ROUND( AVG(price), 2) 
+FROM laptops l
+WHERE processor_brand = 'amd'
+GROUP BY brand) as 'amd'
+from laptops l;
+
+--- avg price
+SELECT
+  l.brand,
+  ROUND(AVG(CASE WHEN l.processor_brand = 'intel' THEN l.price END), 2) as intel_avg_price,
+  ROUND(AVG(CASE WHEN l.processor_brand = 'amd' THEN l.price END), 2) as amd_avg_price,
+   (ROUND(AVG(CASE WHEN l.processor_brand = 'intel' THEN l.price END), 2) -  ROUND(AVG(CASE WHEN l.processor_brand = 'amd' THEN l.price END), 2)) as 'difference'
+FROM
+  laptops l
+GROUP BY
+  l.brand;
+ 
+ -- the higest price of processor tier
+ 
+  select processor_tier as "AMD", round(MAX( price), 0) as 'max price amd',
+   ( select  MAX(CASE WHEN price = (SELECT MAX(price) FROM laptops l3) THEN processor_tier END) AS max_processor_tier
+ from laptops l2
+ where processor_brand in ('intel')
+ order by processor_tier) as Intel,
+  (select  round(MAX( price), 0) 
+ from laptops l
+ where processor_brand in ('intel') )as 'max price intel'
+  from laptops l
+ where processor_brand in ('amd')
+ group by 1
+ order by 2 desc
+ limit 1
+ 
